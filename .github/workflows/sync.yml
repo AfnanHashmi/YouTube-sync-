@@ -12,6 +12,10 @@ on:
         description: "Dry run (show what would change, change nothing)"
         type: boolean
         default: false
+      show_titles:
+        description: "Show video titles in the log"
+        type: boolean
+        default: false
 
 concurrency:
   group: sync-likes
@@ -50,10 +54,12 @@ jobs:
           PYTHONUNBUFFERED: "1"
           DRY_RUN: ${{ inputs.dry_run }}
           LATEST: ${{ inputs.latest }}
+          SHOW_TITLES: ${{ inputs.show_titles }}
         run: |
           args=()
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           if [ -n "$LATEST" ]; then args+=(--latest "$LATEST"); fi
+          if [ "$SHOW_TITLES" = "true" ]; then args+=(--verbose); fi
           python sync_likes.py "${args[@]}"
 
       - name: Save sync state
