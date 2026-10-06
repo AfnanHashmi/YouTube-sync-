@@ -5,7 +5,7 @@ A temporary setup for two YouTube accounts:
 - **Main → Secondary:** every video liked on Main gets liked on Secondary, in the same order.
 - **Secondary → Main:** new videos you like on Secondary also get liked on Main, so Main stays complete for when you switch back.
 
-It runs automatically **once a day** on GitHub Actions. You don't need to keep a computer on.
+It runs on GitHub Actions **only when you click Run workflow** (there is no daily schedule). By default one run copies Main's **newest 190 likes** to Secondary (one-way), the most you can do per day under Google's free quota. Clear the **latest** box to do the full two-way sync instead.
 
 > Unlikes are never copied. If you unlike a video on one account, the tool leaves the other account alone and won't re-add the like.
 
@@ -24,7 +24,7 @@ Use **either** Google account for this; Main is a good choice.
 1. Open **APIs & Services → OAuth consent screen** (also called **Google Auth Platform**). Click **Get started**.
 2. App name: anything, e.g. `My likes sync`. User support email: your email. Audience: **External**. Finish.
 3. Open **Audience** and click **Publish app** → confirm. The status should say **In production**.
-   - This step is important. If the app stays in "Testing", Google logs it out after 7 days and the daily sync stops.
+   - This step is important. If the app stays in "Testing", Google logs it out after 7 days and the sync stops working.
    - There's no review needed for personal use. When you sign in you'll see *"Google hasn't verified this app"*: click **Advanced → Go to … (unsafe)**. It's your own app.
 
 ### 3. Create the client and download it
@@ -59,14 +59,14 @@ Don't share these values with anyone, and don't commit `client_secret.json`. It'
 2. Open the run's log and check that:
    - `Main account:` and `Secondary account:` show the right channels
    - the "Liked on Main" count roughly matches what YouTube shows
-3. Run it again **without** dry run, with **limit** `5`. Five of your Main likes should appear in Secondary's **Liked videos**.
-4. You're done. From now on it runs by itself every day. You can also click **Run workflow** whenever you want a sync right away.
+3. Run it again with **Dry run** unticked and **latest** `190` (the default). Main's 190 newest likes appear in Secondary's **Liked videos**, with Main's latest like on top.
+4. You're done. Nothing runs by itself; click **Run workflow** again whenever you want another batch.
 
 ---
 
 ## Good to know
 
-- **Big like collections take a few days.** Google's free API quota allows about **190 likes per day**, shared between both directions. For example, 2,000 likes take about 11 days. Each daily run continues where the last one stopped, and the log shows how many are left. Main's likes are copied to Secondary first; likes made on Secondary are copied to Main after that.
+- **Big like collections take a few days.** Google's free API quota allows about **190 likes per day**, shared between both directions. For example, 2,000 likes take about 11 days. Each run continues where the last one stopped, and the log shows how many are left. In full two-way mode, Main's likes are copied to Secondary first; likes made on Secondary are copied to Main after that.
 - **Keep the repo private.** The Actions logs show your two channel names (no video titles, unless you run `sync_likes.py --verbose` yourself).
 - **GitHub pauses scheduled jobs after 60 days with no activity in the repo.** You'll get an email; re-enable the workflow from the Actions tab.
 - **If the log says the login expired**, run `python get_tokens.py` again and update the two `*_REFRESH_TOKEN` secrets.
@@ -78,6 +78,7 @@ Don't share these values with anyone, and don't commit `client_secret.json`. It'
 export YT_CLIENT_ID=... YT_CLIENT_SECRET=... MAIN_REFRESH_TOKEN=... SECONDARY_REFRESH_TOKEN=...
 python sync_likes.py --dry-run --verbose   # list what would change, with titles
 python sync_likes.py --limit 10            # like at most 10 videos
+python sync_likes.py --latest 190          # one-way: Main's newest 190 missing likes -> Secondary
 ```
 Running locally uses its own `state.json`, separate from the one GitHub uses. That's fine, because already-synced videos are detected either way.
 

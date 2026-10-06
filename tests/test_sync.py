@@ -213,6 +213,16 @@ def test_dry_run_changes_nothing(state_path):
     assert any("Main account:      Main" in line for line in logs)
 
 
+def test_latest_copies_newest_main_likes_only_and_never_touches_main(state_path):
+    main = FakeYouTube("Main", [f"m{i}" for i in range(10, 0, -1)])  # m10 newest
+    sec = FakeYouTube("Sec", ["m1", "s1"])  # m1 already there, s1 is Secondary-only
+    code, _ = run(main, sec, state_path, latest=3)
+    assert code == 0
+    assert sec.rated == ["m8", "m9", "m10"]  # newest 3 missing, oldest first
+    assert sec.likes[0] == "m10"  # Main's latest like ends up on top
+    assert main.rated == []  # nothing is written to Main
+
+
 def test_limit(state_path):
     main = FakeYouTube("Main", ["c", "b", "a"])
     sec = FakeYouTube("Sec", [])

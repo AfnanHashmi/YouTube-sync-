@@ -1,18 +1,17 @@
 name: Sync likes
 
+# Manual only: click "Run workflow". There is no schedule.
 on:
-  schedule:
-    - cron: "17 3 * * *" # every day at 03:17 UTC
   workflow_dispatch:
     inputs:
+      latest:
+        description: "Copy Main's newest N missing likes to Secondary (one-way). Empty = full two-way sync."
+        type: string
+        default: "190"
       dry_run:
         description: "Dry run (show what would change, change nothing)"
         type: boolean
         default: false
-      limit:
-        description: "Like at most this many videos (empty = no limit)"
-        type: string
-        default: ""
 
 concurrency:
   group: sync-likes
@@ -49,11 +48,11 @@ jobs:
           MAIN_REFRESH_TOKEN: ${{ secrets.MAIN_REFRESH_TOKEN }}
           SECONDARY_REFRESH_TOKEN: ${{ secrets.SECONDARY_REFRESH_TOKEN }}
           DRY_RUN: ${{ inputs.dry_run }}
-          LIMIT: ${{ inputs.limit }}
+          LATEST: ${{ inputs.latest }}
         run: |
           args=()
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
-          if [ -n "$LIMIT" ]; then args+=(--limit "$LIMIT"); fi
+          if [ -n "$LATEST" ]; then args+=(--latest "$LATEST"); fi
           python sync_likes.py "${args[@]}"
 
       - name: Save sync state

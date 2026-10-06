@@ -166,7 +166,7 @@ def apply(jobs, state, limit, log, verbose):
     return written
 
 
-def run(main, secondary, state_path, dry_run=False, limit=None, verbose=False, log=print):
+def run(main, secondary, state_path, dry_run=False, limit=None, verbose=False, log=print, latest=None):
     """Do one sync pass. Returns a process exit code."""
     state = load_state(state_path)
     try:
@@ -180,6 +180,13 @@ def run(main, secondary, state_path, dry_run=False, limit=None, verbose=False, l
 
     log(f"Liked on Main: {len(main_likes)}   Liked on Secondary: {len(sec_likes)}")
     to_main, to_sec, state = plan(main_likes, sec_likes, state)
+    if latest is not None:
+        # One-way mode: only Main's newest N missing likes go to Secondary.
+        # to_sec is oldest first, so the last N are the newest; they are still
+        # liked oldest first, which leaves Main's latest like on top.
+        to_main = []
+        to_sec = to_sec[-latest:] if latest > 0 else []
+        log(f"Latest-only mode: Main -> Secondary, newest {latest} missing likes.")
     log(f"To like on Main (new likes from Secondary): {len(to_main)}")
     log(f"To like on Secondary (from Main):           {len(to_sec)}")
 
@@ -229,6 +236,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--dry-run", action="store_true", help="show what would change, change nothing")
     parser.add_argument("--limit", type=int, help="like at most N videos this run")
+    parser.add_argument("--latest", type=int, metavar="N",
+                        help="one-way: copy only Main's newest N missing likes to Secondary")
     parser.add_argument("--verbose", action="store_true", help="print video IDs and titles")
     parser.add_argument("--state", default=DEFAULT_STATE_FILE, help="state file path")
     args = parser.parse_args(argv)
@@ -246,7 +255,7 @@ def main(argv=None):
         return run(
             build_service(os.environ["MAIN_REFRESH_TOKEN"]),
             build_service(os.environ["SECONDARY_REFRESH_TOKEN"]),
-            args.state, dry_run=args.dry_run, limit=args.limit, verbose=args.verbose,
+            args.state, dry_run=args.dry_run, limit=args.limit, verbose=args.verbose, latest=args.latest,
         )
     except RefreshError as err:
         print(f"Google login expired or was revoked ({err}).", file=sys.stderr)
