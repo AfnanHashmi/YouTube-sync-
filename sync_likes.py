@@ -4,7 +4,7 @@
 * Main -> Secondary: every video liked on Main gets liked on Secondary
   (oldest first, so Secondary's "Liked videos" keeps Main's order).
 * Secondary -> Main: new likes made on Secondary get liked on Main too.
-  These go first because there are usually only a few of them.
+  These go second, after Main's likes have been copied to Secondary.
 
 Unlikes are never propagated and never undone: if a video that was already
 liked on both accounts disappears from one of them, it is left alone.
@@ -194,7 +194,7 @@ def run(main, secondary, state_path, dry_run=False, limit=None, verbose=False, l
     written = 0
     out_of_quota = False
     try:
-        written = apply([(main, "Main", to_main), (secondary, "Secondary", to_sec)],
+        written = apply([(secondary, "Secondary", to_sec), (main, "Main", to_main)],
                         state, limit, log, verbose)
     except QuotaExceeded:
         out_of_quota = True

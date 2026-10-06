@@ -89,14 +89,14 @@ def test_backfill_main_to_secondary_oldest_first(state_path):
     assert set(saved(state_path)["synced"]) == {"m1", "m2", "m3"}
 
 
-def test_new_secondary_likes_go_to_main_first(state_path):
+def test_main_likes_go_to_secondary_first(state_path):
     main = FakeYouTube("Main", ["m2", "m1"])
     sec = FakeYouTube("Sec", ["s2", "s1"])
     calls = []
     main.rate = _spy(main.rate, calls, "Main")
     sec.rate = _spy(sec.rate, calls, "Sec")
     run(main, sec, state_path)
-    assert calls == [("Main", "s1"), ("Main", "s2"), ("Sec", "m1"), ("Sec", "m2")]
+    assert calls == [("Sec", "m1"), ("Sec", "m2"), ("Main", "s1"), ("Main", "s2")]
 
 
 def _spy(fn, calls, label):

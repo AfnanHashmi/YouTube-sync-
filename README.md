@@ -66,7 +66,7 @@ Don't share these values with anyone, and don't commit `client_secret.json`. It'
 
 ## Good to know
 
-- **Big like collections take a few days.** Google's free API quota allows about **190 likes per day**, shared between both directions. For example, 2,000 likes take about 11 days. Each daily run continues where the last one stopped, and the log shows how many are left. New likes from Secondary always go first.
+- **Big like collections take a few days.** Google's free API quota allows about **190 likes per day**, shared between both directions. For example, 2,000 likes take about 11 days. Each daily run continues where the last one stopped, and the log shows how many are left. Main's likes are copied to Secondary first; likes made on Secondary are copied to Main after that.
 - **Keep the repo private.** The Actions logs show your two channel names (no video titles, unless you run `sync_likes.py --verbose` yourself).
 - **GitHub pauses scheduled jobs after 60 days with no activity in the repo.** You'll get an email; re-enable the workflow from the Actions tab.
 - **If the log says the login expired**, run `python get_tokens.py` again and update the two `*_REFRESH_TOKEN` secrets.
