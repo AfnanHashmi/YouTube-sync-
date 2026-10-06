@@ -165,6 +165,7 @@ def test_quota_exceeded_saves_progress_and_resumes(state_path):
     assert sec.rated == ["m1", "m2"]
     assert any("quota" in line for line in logs)
     assert any("Still to go: 2" in line for line in logs)
+    assert any("Liked 2 video(s)" in line for line in logs)
     sec.quota = None  # next day
     run(main, sec, state_path)
     assert sec.rated == ["m1", "m2", "m3", "m4"]

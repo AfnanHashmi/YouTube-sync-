@@ -138,18 +138,17 @@ def plan(main_likes, sec_likes, state):
     return to_main, to_sec, state
 
 
-def apply(jobs, state, limit, log, verbose):
+def apply(jobs, state, limit, log, verbose, counter):
     """Like videos. jobs = [(service, label, [(id, title)]), ...] in priority order.
 
-    Returns the number of likes written. Raises QuotaExceeded when out of quota.
+    counter[0] counts likes written (kept up to date even if QuotaExceeded is raised).
     """
     from googleapiclient.errors import HttpError
 
-    written = 0
     for service, label, videos in jobs:
         for vid, title in videos:
-            if limit is not None and written >= limit:
-                return written
+            if limit is not None and counter[0] >= limit:
+                return
             try:
                 like_video(service, vid)
             except HttpError as err:
@@ -160,10 +159,9 @@ def apply(jobs, state, limit, log, verbose):
                     continue
                 raise
             state["synced"].add(vid)
-            written += 1
+            counter[0] += 1
             if verbose:
                 log(f"  liked on {label}: {vid} {title}")
-    return written
 
 
 def run(main, secondary, state_path, dry_run=False, limit=None, verbose=False, log=print, latest=None):
@@ -198,11 +196,11 @@ def run(main, secondary, state_path, dry_run=False, limit=None, verbose=False, l
         log("Dry run: nothing was changed.")
         return 0
 
-    written = 0
+    counter = [0]
     out_of_quota = False
     try:
-        written = apply([(secondary, "Secondary", to_sec), (main, "Main", to_main)],
-                        state, limit, log, verbose)
+        apply([(secondary, "Secondary", to_sec), (main, "Main", to_main)],
+                        state, limit, log, verbose, counter)
     except QuotaExceeded:
         out_of_quota = True
     finally:
@@ -211,7 +209,7 @@ def run(main, secondary, state_path, dry_run=False, limit=None, verbose=False, l
     remaining = sum(1 for v, _ in to_main + to_sec if v not in state["synced"] | state["skipped"])
     if out_of_quota:
         log("Out of YouTube API quota for today; will continue on the next run.")
-    log(f"Liked {written} video(s) this run. Still to go: {remaining}.")
+    log(f"Liked {counter[0]} video(s) this run. Still to go: {remaining}.")
     return 0
 
 

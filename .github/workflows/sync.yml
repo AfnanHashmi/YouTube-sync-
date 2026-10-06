@@ -47,6 +47,7 @@ jobs:
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           MAIN_REFRESH_TOKEN: ${{ secrets.MAIN_REFRESH_TOKEN }}
           SECONDARY_REFRESH_TOKEN: ${{ secrets.SECONDARY_REFRESH_TOKEN }}
+          PYTHONUNBUFFERED: "1"
           DRY_RUN: ${{ inputs.dry_run }}
           LATEST: ${{ inputs.latest }}
         run: |
