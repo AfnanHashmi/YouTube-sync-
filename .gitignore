@@ -1,0 +1,12 @@
+# Credentials - never commit these
+client_secret*.json
+token*.json
+
+# Sync state (kept in the GitHub Actions cache instead)
+state.json
+state.json.tmp
+
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
