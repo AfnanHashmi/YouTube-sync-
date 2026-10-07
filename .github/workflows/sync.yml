@@ -4,8 +4,16 @@ name: Sync likes
 on:
   workflow_dispatch:
     inputs:
+      direction:
+        description: "Which way to copy likes"
+        type: choice
+        options:
+          - main-to-secondary
+          - secondary-to-main
+          - both
+        default: main-to-secondary
       latest:
-        description: "Copy Main's newest N missing likes to Secondary (one-way). Empty = full two-way sync."
+        description: "Copy only the newest N missing likes (190 = one day's quota). Empty = all of them."
         type: string
         default: "190"
       dry_run:
@@ -54,11 +62,13 @@ jobs:
           PYTHONUNBUFFERED: "1"
           DRY_RUN: ${{ inputs.dry_run }}
           LATEST: ${{ inputs.latest }}
+          DIRECTION: ${{ inputs.direction }}
           SHOW_TITLES: ${{ inputs.show_titles }}
         run: |
           args=()
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           if [ -n "$LATEST" ]; then args+=(--latest "$LATEST"); fi
+          if [ -n "$DIRECTION" ]; then args+=(--direction "$DIRECTION"); fi
           if [ "$SHOW_TITLES" = "true" ]; then args+=(--verbose); fi
           python sync_likes.py "${args[@]}"
 

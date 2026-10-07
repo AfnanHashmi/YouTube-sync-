@@ -224,6 +224,30 @@ def test_latest_copies_newest_main_likes_only_and_never_touches_main(state_path)
     assert main.rated == []  # nothing is written to Main
 
 
+def test_direction_secondary_to_main_copies_secondarys_newest_to_main_only(state_path):
+    main = FakeYouTube("Main", ["m1"])
+    sec = FakeYouTube("Sec", [f"s{i}" for i in range(10, 0, -1)] + ["m1"])  # s10 newest
+    code, _ = run(main, sec, state_path, latest=3, direction="secondary-to-main")
+    assert code == 0
+    assert main.rated == ["s8", "s9", "s10"]  # newest 3 Secondary-only, oldest first
+    assert main.likes[0] == "s10"  # Secondary's latest like ends up on top of Main
+    assert sec.rated == []  # nothing is written to Secondary
+
+
+def test_direction_main_to_secondary_is_default_with_latest(state_path):
+    main = FakeYouTube("Main", ["m2", "m1"])
+    sec = FakeYouTube("Sec", ["s1"])
+    run(main, sec, state_path, latest=5)
+    assert sec.rated == ["m1", "m2"] and main.rated == []
+
+
+def test_direction_both_with_latest_limits_each_side(state_path):
+    main = FakeYouTube("Main", ["m3", "m2", "m1"])
+    sec = FakeYouTube("Sec", ["s3", "s2", "s1"])
+    run(main, sec, state_path, latest=2, direction="both")
+    assert sec.rated == ["m2", "m3"] and main.rated == ["s2", "s3"]
+
+
 def test_limit(state_path):
     main = FakeYouTube("Main", ["c", "b", "a"])
     sec = FakeYouTube("Sec", [])

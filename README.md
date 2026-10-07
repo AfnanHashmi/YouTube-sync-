@@ -5,7 +5,7 @@ A temporary setup for two YouTube accounts:
 - **Main → Secondary:** every video liked on Main gets liked on Secondary, in the same order.
 - **Secondary → Main:** new videos you like on Secondary also get liked on Main, so Main stays complete for when you switch back.
 
-It runs on GitHub Actions **only when you click Run workflow** (there is no daily schedule). By default one run copies Main's **newest 190 likes** to Secondary (one-way), the most you can do per day under Google's free quota. Clear the **latest** box to do the full two-way sync instead.
+It runs on GitHub Actions **only when you click Run workflow** (there is no daily schedule). By default one run copies Main's **newest 190 likes** to Secondary (one-way), the most you can do per day under Google's free quota. Use the **direction** dropdown to copy the other way (Secondary → Main) or both ways.
 
 > Unlikes are never copied. If you unlike a video on one account, the tool leaves the other account alone and won't re-add the like.
 
@@ -79,6 +79,7 @@ export YT_CLIENT_ID=... YT_CLIENT_SECRET=... MAIN_REFRESH_TOKEN=... SECONDARY_RE
 python sync_likes.py --dry-run --verbose   # list what would change, with titles
 python sync_likes.py --limit 10            # like at most 10 videos
 python sync_likes.py --latest 190          # one-way: Main's newest 190 missing likes -> Secondary
+python sync_likes.py --latest 190 --direction secondary-to-main   # the other way round
 ```
 Running locally uses its own `state.json`, separate from the one GitHub uses. That's fine, because already-synced videos are detected either way.
 
