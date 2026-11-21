@@ -32,6 +32,12 @@ class QuotaExceeded(Exception):
     pass
 
 
+class LoginFailed(Exception):
+    def __init__(self, failures):
+        super().__init__("; ".join(f"{label}: {why}" for label, why in failures))
+        self.failures = failures
+
+
 def error_reason(err):
     """Return the API error reason (e.g. 'quotaExceeded') from an HttpError."""
     try:
@@ -225,19 +231,43 @@ def run(main, secondary, state_path, dry_run=False, limit=None, verbose=False, l
 
 # ---------------------------------------------------------------- entry point
 
-def build_service(refresh_token):
+def env(name):
+    """Read an environment variable, ignoring stray spaces/newlines from pasting."""
+    return os.environ.get(name, "").strip()
+
+
+def build_service(label, refresh_token):
+    from google.auth.exceptions import RefreshError
+    from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
 
     creds = Credentials(
         token=None,
         refresh_token=refresh_token,
-        client_id=os.environ["YT_CLIENT_ID"],
-        client_secret=os.environ["YT_CLIENT_SECRET"],
+        client_id=env("YT_CLIENT_ID"),
+        client_secret=env("YT_CLIENT_SECRET"),
         token_uri=TOKEN_URI,
         scopes=SCOPES,
     )
+    try:
+        creds.refresh(Request())  # fail early, and say which account is the problem
+    except RefreshError as err:
+        raise LoginFailed([(label, str(err))]) from err
     return build("youtube", "v3", credentials=creds, cache_discovery=False)
+
+
+def build_services():
+    """Log in to both accounts; if any fail, report every failure at once."""
+    services, failures = {}, []
+    for label, name in (("Main", "MAIN_REFRESH_TOKEN"), ("Secondary", "SECONDARY_REFRESH_TOKEN")):
+        try:
+            services[label] = build_service(label, env(name))
+        except LoginFailed as err:
+            failures += err.failures
+    if failures:
+        raise LoginFailed(failures)
+    return services["Main"], services["Secondary"]
 
 
 def main(argv=None):
@@ -253,25 +283,28 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     missing = [name for name in ("YT_CLIENT_ID", "YT_CLIENT_SECRET", "MAIN_REFRESH_TOKEN",
-                                 "SECONDARY_REFRESH_TOKEN") if not os.environ.get(name)]
+                                 "SECONDARY_REFRESH_TOKEN") if not env(name)]
     if missing:
         print("Missing environment variables: " + ", ".join(missing), file=sys.stderr)
         print("Run get_tokens.py and add the values as GitHub secrets (see README.md).", file=sys.stderr)
         return 2
 
-    from google.auth.exceptions import RefreshError
-
     try:
-        return run(
-            build_service(os.environ["MAIN_REFRESH_TOKEN"]),
-            build_service(os.environ["SECONDARY_REFRESH_TOKEN"]),
-            args.state, dry_run=args.dry_run, limit=args.limit, verbose=args.verbose, latest=args.latest,
-            direction=args.direction,
-        )
-    except RefreshError as err:
-        print(f"Google login expired or was revoked ({err}).", file=sys.stderr)
-        print("Run get_tokens.py again and update the refresh-token secrets.", file=sys.stderr)
+        main_service, secondary_service = build_services()
+    except LoginFailed as err:
+        for label, why in err.failures:
+            print(f"Google rejected the {label} login: {why}", file=sys.stderr)
+        print("Likely causes: the *_REFRESH_TOKEN secret is old, mistyped or for the wrong account;", file=sys.stderr)
+        print("YT_CLIENT_ID / YT_CLIENT_SECRET are not from the same client_secret.json that", file=sys.stderr)
+        print("get_tokens.py used; the app is still in 'Testing' (logins expire after 7 days);", file=sys.stderr)
+        print("or access was revoked. Run get_tokens.py again and update ALL FOUR secrets from", file=sys.stderr)
+        print("its output (see README.md).", file=sys.stderr)
         return 1
+    return run(
+        main_service, secondary_service,
+        args.state, dry_run=args.dry_run, limit=args.limit, verbose=args.verbose, latest=args.latest,
+        direction=args.direction,
+    )
 
 
 if __name__ == "__main__":

@@ -267,3 +267,24 @@ def test_missing_env_vars(monkeypatch, capsys):
         monkeypatch.delenv(name, raising=False)
     assert sync_likes.main([]) == 2
     assert "Missing environment variables" in capsys.readouterr().err
+
+
+def test_login_failure_names_the_failing_account(monkeypatch, capsys):
+    from google.auth.exceptions import RefreshError
+    from google.oauth2.credentials import Credentials
+
+    monkeypatch.setenv("YT_CLIENT_ID", " id\n")
+    monkeypatch.setenv("YT_CLIENT_SECRET", "secret")
+    monkeypatch.setenv("MAIN_REFRESH_TOKEN", "bad-main\n")  # stray newline is ignored
+    monkeypatch.setenv("SECONDARY_REFRESH_TOKEN", "bad-sec")
+    seen = []
+
+    def fake_refresh(self, request):
+        seen.append((self.refresh_token, self.client_id))
+        raise RefreshError("invalid_grant")
+
+    monkeypatch.setattr(Credentials, "refresh", fake_refresh)
+    assert sync_likes.main(["--dry-run"]) == 1
+    err = capsys.readouterr().err
+    assert "Main login" in err and "Secondary login" in err  # both reported at once
+    assert seen == [("bad-main", "id"), ("bad-sec", "id")]  # whitespace stripped
